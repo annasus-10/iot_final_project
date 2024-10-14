@@ -1,0 +1,9 @@
+{
+  "currentValue": 23.31412,
+  "highAlarmStatus": true,
+  "highAlarmValue": 50,
+  "lowAlarmStatus": true,
+  "lowAlarmValue": 40,
+  "setpointValue": 35,
+  "status": false
+}
