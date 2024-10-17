@@ -147,7 +147,7 @@
         "diff": false,
         "className": "",
         "x": 520,
-        "y": 240,
+        "y": 360,
         "wires": []
     },
     {
@@ -221,7 +221,10 @@
         "wires": [
             [
                 "0a7498819b6dd7e0",
-                "c49c5acb334eb319"
+                "c49c5acb334eb319",
+                "80248ab4cf3d0a78",
+                "8361bb05a6bf6a38",
+                "c2d65729210158d8"
             ]
         ]
     },
@@ -229,7 +232,7 @@
         "id": "c49c5acb334eb319",
         "type": "http request",
         "z": "f1948e5f0c0845d3",
-        "name": "",
+        "name": "sp",
         "method": "GET",
         "ret": "txt",
         "paytoqs": "ignore",
@@ -241,12 +244,251 @@
         "authType": "",
         "senderr": false,
         "headers": [],
+        "x": 310,
+        "y": 360,
+        "wires": [
+            [
+                "b68e71c83aa65fad",
+                "6dc2f705cfbec7b8"
+            ]
+        ]
+    },
+    {
+        "id": "07cf13dfb3eb1f20",
+        "type": "ui_text",
+        "z": "f1948e5f0c0845d3",
+        "group": "6e9f74d3e87e2a1f",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "High Alarm",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 530,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "80248ab4cf3d0a78",
+        "type": "http request",
+        "z": "f1948e5f0c0845d3",
+        "name": "",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://iot-project-b6673-default-rtdb.asia-southeast1.firebasedatabase.app/highAlarmStatus.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
         "x": 330,
         "y": 240,
         "wires": [
             [
-                "b68e71c83aa65fad"
+                "07cf13dfb3eb1f20"
             ]
+        ]
+    },
+    {
+        "id": "1cb5469a2df26c0a",
+        "type": "ui_text",
+        "z": "f1948e5f0c0845d3",
+        "group": "6e9f74d3e87e2a1f",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Low Alarm",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 530,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "8361bb05a6bf6a38",
+        "type": "http request",
+        "z": "f1948e5f0c0845d3",
+        "name": "",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://iot-project-b6673-default-rtdb.asia-southeast1.firebasedatabase.app/lowAlarmStatus.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 330,
+        "y": 300,
+        "wires": [
+            [
+                "1cb5469a2df26c0a"
+            ]
+        ]
+    },
+    {
+        "id": "c2d65729210158d8",
+        "type": "http request",
+        "z": "f1948e5f0c0845d3",
+        "name": "",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://iot-project-b6673-default-rtdb.asia-southeast1.firebasedatabase.app/currentValue.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 330,
+        "y": 500,
+        "wires": [
+            [
+                "9e4aaca20ca80e75"
+            ]
+        ]
+    },
+    {
+        "id": "5e28a69bd59166d1",
+        "type": "debug",
+        "z": "f1948e5f0c0845d3",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "6dc2f705cfbec7b8",
+        "type": "function",
+        "z": "f1948e5f0c0845d3",
+        "name": "function 2",
+        "func": "msg.topic = \"sp\"\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 420,
+        "wires": [
+            [
+                "81fa694ac81e4a2d"
+            ]
+        ]
+    },
+    {
+        "id": "81fa694ac81e4a2d",
+        "type": "function",
+        "z": "f1948e5f0c0845d3",
+        "name": "function 1",
+        "func": "var sp = {};\nvar pv = {};\n\nswitch (msg.topic) {\n    case \"pv\":\n        sp = null;\n        pv = msg;\n        break;\n    case \"sp\":\n        sp = msg;\n        pv = null;\n        break;\n    default:\n        sp = null;\n        pv = null;\n        break;\n}\nreturn [sp, pv];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 420,
+        "wires": [
+            [
+                "74a0eb9cea8f2cae"
+            ],
+            [
+                "74a0eb9cea8f2cae"
+            ]
+        ]
+    },
+    {
+        "id": "9e4aaca20ca80e75",
+        "type": "function",
+        "z": "f1948e5f0c0845d3",
+        "name": "function 3",
+        "func": "msg.topic = \"pv\"\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 500,
+        "wires": [
+            [
+                "81fa694ac81e4a2d"
+            ]
+        ]
+    },
+    {
+        "id": "74a0eb9cea8f2cae",
+        "type": "ui_chart",
+        "z": "f1948e5f0c0845d3",
+        "name": "",
+        "group": "6e9f74d3e87e2a1f",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "100",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 890,
+        "y": 420,
+        "wires": [
+            []
         ]
     }
 ]

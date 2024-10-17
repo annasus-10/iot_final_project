@@ -25,6 +25,7 @@ int setpointValue;
 int highAlarmValue;
 int lowAlarmValue;
 float PV = 0.0;
+float EV = 0.0;
 
 unsigned long previousMillis1 = 0;
 unsigned long previousMillis2 = 0;
@@ -81,8 +82,12 @@ void loop() {
     Serial.print(t1Value);
     Serial.print(", t2Value: ");
     Serial.println(t2Value);
-    Serial.print("PV: ");
-    Serial.println(PV);  // Assuming PV is updated elsewhere in your loop
+    Serial.print(" PV: ");
+    Serial.print(PV);  // Assuming PV is updated elsewhere in your loop
+    Serial.print(" SP: ");
+    Serial.print(setpointValue);  // Assuming PV is updated elsewhere in your loop
+    Serial.print("EV: ");
+    Serial.println(EV);  // Assuming PV is updated elsewhere in your loop
   }
 
   // Read sensor value
@@ -121,5 +126,12 @@ void loop() {
 
     // Update Firebase with current value
     Firebase.RTDB.setInt(&fbdo, "/currentValue", PV);  
+  }
+
+  EV = setpointValue - PV;
+  if (EV > 0) {
+    digitalWrite(pinLamb, HIGH);
+  } else {
+    digitalWrite(pinLamb, LOW);
   }
 }

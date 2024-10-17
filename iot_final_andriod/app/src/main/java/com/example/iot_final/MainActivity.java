@@ -1,8 +1,10 @@
 package com.example.iot_final;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -19,15 +21,80 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.LegendRenderer;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
+
+
+    // Reference to ImageViews for high and low alarms
+    private ImageView hiAlarmImageView;
+    private ImageView loAlarmImageView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Initialize the ImageViews for high and low alarms
+        hiAlarmImageView = findViewById(R.id.HiAlarmImage);
+        loAlarmImageView = findViewById(R.id.LoAlarmImage);
+
+        // Firebase Database references for high and low alarm statuses
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference highAlarmRef = database.getReference("highAlarmStatus");
+        DatabaseReference lowAlarmRef = database.getReference("lowAlarmStatus");
+
+        // Listen for changes in high alarm status
+        highAlarmRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean isHighAlarmOn = dataSnapshot.getValue(Boolean.class);
+
+                    if (isHighAlarmOn != null && isHighAlarmOn) {
+                        // High alarm is ON, show LED ON image
+                        hiAlarmImageView.setImageResource(R.drawable.ledon);
+                    } else {
+                        // High alarm is OFF, show LED OFF image
+                        hiAlarmImageView.setImageResource(R.drawable.ledoff);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle possible errors
+            }
+        });
+
+        // Listen for changes in low alarm status
+        lowAlarmRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean isLowAlarmOn = dataSnapshot.getValue(Boolean.class);
+
+                    if (isLowAlarmOn != null && isLowAlarmOn) {
+                        // Low alarm is ON, show LED ON image
+                        loAlarmImageView.setImageResource(R.drawable.ledon);
+                    } else {
+                        // Low alarm is OFF, show LED OFF image
+                        loAlarmImageView.setImageResource(R.drawable.ledoff);
+                    }
+                }
+            }
     private GraphView graphView;
-    private LineGraphSeries<DataPoint> seriesPV; // For PV data
-    private LineGraphSeries<DataPoint> seriesSP; // For SP data
-    private int xValue = 0; // To keep track of the X axis points
+    LineGraphSeries<DataPoint> pvSeries = new LineGraphSeries<>();
+    LineGraphSeries<DataPoint> spSeries = new LineGraphSeries<>();
+    private double latestSP = 0.0;
+    private double latestPV = 0.0;
 
     Button btnOn, btnOff;
     SeekBar seekBarSP, seekBarHA, seekBarLA;
@@ -134,16 +201,42 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
-        seriesPV = new LineGraphSeries<>();
-        seriesSP = new LineGraphSeries<>();
+        graphView.addSeries(pvSeries);
+        graphView.addSeries(spSeries);
 
-        graphView.addSeries(seriesPV); // Add PV series
-        graphView.addSeries(seriesSP); // Add SP series
+        pvSeries.setColor(Color.RED);  // Set PV series to red
+        pvSeries.setTitle("PV");
+        spSeries.setColor(Color.BLUE); // Set SP series to blue
+        spSeries.setTitle("SP");
 
-        // Customize the X and Y axes
-        graphView.getViewport().setMinX(0);
-        graphView.getViewport().setMaxX(100);
+
+        // Enable the legend to distinguish between PV and SP
+        graphView.getLegendRenderer().setVisible(true);
+        graphView.getLegendRenderer().setAlign(LegendRenderer.LegendAlign.TOP);
+
+
+        // Customize the x-axis to display only the current time
+        graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
+            @Override
+            public String formatLabel(double value, boolean isValueX) {
+                if (isValueX) {
+                    // Only show the current time in a readable format
+                    return new SimpleDateFormat("HH:mm:ss").format(new Date((long) value));
+                } else {
+                    // Show normal y-axis values (PV and SP values)
+                    return super.formatLabel(value, isValueX);
+                }
+            }
+        });
+
+// Customize the number of x-axis labels to avoid crowding
+        graphView.getGridLabelRenderer().setNumHorizontalLabels(3); // Show 3 labels to avoid clutter
+
+// Disable automatic scaling of the x-axis (if you want to keep the range static)
         graphView.getViewport().setXAxisBoundsManual(true);
+        graphView.getViewport().setMinX(System.currentTimeMillis()); // Start from the current time
+        graphView.getViewport().setMaxX(System.currentTimeMillis() + 20000); // 1 minute window
+
 
         graphView.getViewport().setMinY(0);
         graphView.getViewport().setMaxY(100);
@@ -153,45 +246,46 @@ public class MainActivity extends AppCompatActivity {
         graphView.getGridLabelRenderer().setHorizontalAxisTitle("Time (seconds)");
         graphView.getGridLabelRenderer().setVerticalAxisTitle("Value");
 
-        // Set labels for axes
-        graphView.getGridLabelRenderer().setHorizontalAxisTitle("Setpoint Value (SP)"); // SP on X-axis
-        graphView.getGridLabelRenderer().setVerticalAxisTitle("Process Variable (PV)"); // PV on Y-axis
-
         // Reference to Firebase Database
         DatabaseReference refPV = database.getReference("currentValue");
         DatabaseReference refSP = database.getReference("setpointValue");
+        // Variables to store PV and SP values
 
-        // Listener for PV data
+
+        // Listener for PV (currentValue)
         refPV.addValueEventListener(new ValueEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    double pv = snapshot.getValue(Double.class); // Get the PV value
-                    
-                    // You need to fetch the current SP value to plot (this is the assumption)
-                    refSP.addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull DataSnapshot spSnapshot) {
-                            if (spSnapshot.exists()) {
-                                double sp = spSnapshot.getValue(Double.class); // Get the SP value
-                                // Append the new DataPoint for SP vs PV
-                                seriesSP.appendData(new DataPoint(sp, pv), true, 100); // Use a single series
-                            }
-                        }
-
-                        @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-                            // Handle errors here
-                        }
-                    });
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    final double currentValue = dataSnapshot.getValue(Double.class);
+                    updateGraph(currentValue, latestSP);  // Update graph with current values
+                    latestPV = currentValue;
                 }
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                // Handle possible errors
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle error
             }
         });
+
+// Listener for SP (setpointValue)
+        refSP.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    final double setpointValue = dataSnapshot.getValue(Double.class);  // Assuming values are doubles
+                    updateGraph(latestPV, setpointValue);  // Update graph with current values
+                    latestSP = setpointValue;
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle error
+            }
+        });
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.tvHeader), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -200,4 +294,23 @@ public class MainActivity extends AppCompatActivity {
 
         });
     }
+
+    private void updateGraph(double pv, double sp) {
+        // Add a timestamp for x-axis (assuming real-time plotting)
+        long time = System.currentTimeMillis();
+
+        // Update PV series
+        pvSeries.appendData(new DataPoint(time, pv), true, 100);
+
+        // Update SP series
+        spSeries.appendData(new DataPoint(time, sp), true, 100);
+
+        // Optionally, compare PV and SP for additional logic
+        if (pv > sp) {
+            // Perform some action if PV is greater than SP
+        } else if (pv < sp) {
+            // Perform some action if PV is less than SP
+        }
+    }
+
 }
